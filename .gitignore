@@ -1,24 +1,46 @@
-# Compiled class file
+# === Java Compiled Files ===
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
-*.nar
 *.ear
-*.zip
-*.tar.gz
-*.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# === Java Log Files ===
+*.log
+
+# === Build Directories ===
+/bin/
+/target/
+/out/
+
+# === Eclipse Files ===
+.project
+.classpath
+.settings/
+
+# === IntelliJ IDEA Files ===
+.idea/
+*.iml
+*.iws
+
+# === OS Generated Files ===
+.DS_Store
+Thumbs.db
+
+# === Maven or Gradle Wrapper ===
+.mvn/
+.gradle/
+build/
+
+# === Optional: ignore environment config ===
+*.env
+*.properties
+
+#Eclipse metadata
+/.metadata
+.metadata/
+
+#Eclipse and IntelliJ IDE
+/Eclipse
+/IntelliJ
+.eclipse.lnk
+.intelliJ.lnk
