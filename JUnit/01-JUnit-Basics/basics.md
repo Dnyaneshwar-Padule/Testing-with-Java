@@ -408,9 +408,3 @@ A simple test can confirm that a method behaves correctly, and many tests togeth
 
 ---
 
-Next topics to explore:
-
-- JUnit Lifecycle Annotations (`@BeforeEach`, `@AfterEach`)
-- Testing Exceptions
-- Parameterized Tests
-- Mockito (mocking dependencies)
