@@ -2,16 +2,7 @@
 // And so, the GreeterTest is also kept in the same package com.tca.util (A convention)
 package com.tca.util;
 
-/*
- 	Here, why the static keyword is used ?
- 	The assertEquals is a method in Assertions class, and it is defined as static, we are importing only the assertEquals method from Assertions class, but will it load the entire class
-	
-	But can't we just define the Assert class into the class as 
-	private static Assertions assertions;
-	
-	and use assertions.assertEquals()
 
- */
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
