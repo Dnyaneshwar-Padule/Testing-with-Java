@@ -1,20 +1,24 @@
 # Why `@BeforeAll` and `@AfterAll` Are Static in JUnit
 
-Understanding why some lifecycle methods must be `static` requires understanding **how JUnit actually executes tests**.
+To understand why `@BeforeAll` and `@AfterAll` are usually declared as `static`, we first need to understand **how JUnit creates and executes test classes**.
 
-JUnit follows a design principle called **test isolation**. Each test should behave like an independent experiment so that one test cannot accidentally affect another.
+JUnit is designed around an important principle:
+
+> **Each test should run in isolation so that one test cannot affect another.**
+
+This principle is called **test isolation**.
 
 ---
 
 # Default Test Instance Lifecycle
 
-By default, JUnit uses the following lifecycle:
+By default, JUnit 5 uses the following lifecycle:
 
 ```
-PER_METHOD
+@TestInstance(Lifecycle.PER_METHOD)
 ```
 
-This means **JUnit creates a new instance of the test class for every test method**.
+This means that **JUnit creates a new instance of the test class for every test method**.
 
 Example test class:
 
@@ -30,25 +34,25 @@ class ExampleTest {
 }
 ```
 
-Internally JUnit behaves approximately like this:
+JUnit internally behaves roughly like this:
 
 ```
-create ExampleTest object
+create ExampleTest instance
 run testA()
 
-create ExampleTest object
+create ExampleTest instance
 run testB()
 ```
 
-Each test runs with a **fresh object instance**.
+Each test runs using a **fresh object instance**.
 
-This ensures that tests do not interfere with each other.
+This ensures that tests remain independent and do not share state accidentally.
 
 ---
 
-# Why Test Isolation Is Important
+# Why Test Isolation Matters
 
-Consider this example:
+Consider the following test class:
 
 ```java
 class CounterTest {
@@ -70,39 +74,48 @@ class CounterTest {
 }
 ```
 
-If the same object were reused:
+Because JUnit creates a new object for each test:
+
+```
+create CounterTest instance
+counter = 0
+testA → counter = 1 ✔
+
+create CounterTest instance
+counter = 0
+testB → counter = 1 ✔
+```
+
+Both tests pass because **each test starts with a clean state**.
+
+If the same instance were reused, the execution would look like this:
 
 ```
 counter = 0
 
 testA → counter = 1
-testB → counter = 2   (FAIL)
+testB → counter = 2 ❌
 ```
 
-But with JUnit’s default behavior:
+The second test would fail because the previous test modified the shared state.
 
-```
-testA → new instance → counter = 1
-testB → new instance → counter = 1
-```
+JUnit avoids this problem by creating **a new test instance per test method**.
 
-Each test starts from a clean state.
-
-This is called **test independence**.
+This behavior ensures **test independence**.
 
 ---
 
 # Why `@BeforeAll` Must Be Static
 
-`@BeforeAll` runs **once before all tests in the class**.
+`@BeforeAll` is executed **once before all test methods in the class run**.
 
-But at that moment, **JUnit has not created any test instance yet**.
+However, at that moment **JUnit has not yet created any test instance**.
 
-Since there is no object, JUnit cannot call a normal instance method.
+Because there is no object available, JUnit cannot call a normal instance method.
 
-Therefore the method must belong to the **class itself**, not to an object.
+Therefore the method must belong to the **class itself**, not to a specific object.
 
-This is exactly what `static` means.
+This is exactly what the `static` keyword represents.
 
 Example:
 
@@ -113,7 +126,7 @@ static void init() {
 }
 ```
 
-JUnit calls it like this:
+JUnit invokes it like this:
 
 ```
 ExampleTest.init()
@@ -125,11 +138,11 @@ No object instance is required.
 
 # Why `@AfterAll` Must Be Static
 
-`@AfterAll` runs **once after all tests have finished**.
+`@AfterAll` runs **once after all test methods have finished executing**.
 
-Like `@BeforeAll`, it runs **outside the lifecycle of individual test objects**.
+Like `@BeforeAll`, it runs outside the lifecycle of individual test instances.
 
-Therefore it also must be `static`.
+Therefore it must also be declared `static`.
 
 Example:
 
@@ -142,7 +155,7 @@ static void cleanup() {
 
 ---
 
-# Why We Use `@BeforeEach` Instead of `@BeforeAll`
+# Why `@BeforeEach` Is Used Instead of `@BeforeAll`
 
 `@BeforeEach` runs **before every test method**.
 
@@ -161,7 +174,7 @@ class CalculatorTest {
 }
 ```
 
-JUnit internally behaves like this:
+Execution flow:
 
 ```
 create CalculatorTest instance
@@ -173,25 +186,26 @@ run @BeforeEach
 run test2
 ```
 
-Each test gets a **fresh environment**.
+Each test gets a **fresh test environment**.
 
-This prevents tests from accidentally modifying shared state.
+This prevents tests from modifying shared objects or affecting other tests.
 
-Although objects are recreated each time, most test objects are lightweight, so this cost is usually negligible.
+Although objects are recreated each time, test setup is usually lightweight, so the overhead is minimal.
 
 ---
 
 # When `@BeforeAll` Is Useful
 
-`@BeforeAll` should be used for **expensive resources that should be created only once**.
+`@BeforeAll` should be used when initializing **expensive resources that should only be created once**.
 
-Examples:
+Examples include:
 
 ```
-database connections
-starting a server
-loading a large dataset
-starting containers
+Starting a database
+Launching a server
+Loading large datasets
+Starting containerized services
+Initializing shared configuration
 ```
 
 Example:
@@ -199,7 +213,7 @@ Example:
 ```java
 @BeforeAll
 static void startDatabase() {
-    // start database once
+    // start database connection once
 }
 ```
 
@@ -209,7 +223,7 @@ static void startDatabase() {
 
 Yes.
 
-JUnit calls the constructor every time it creates a test instance.
+JUnit calls the constructor every time it creates a new test instance.
 
 Example:
 
@@ -225,19 +239,19 @@ class CalculatorTest {
 }
 ```
 
-This works similarly to `@BeforeEach`.
+This behaves similarly to `@BeforeEach`.
 
-However, `@BeforeEach` is preferred because:
+However, `@BeforeEach` is usually preferred because:
 
-- it clearly indicates **test setup**
-- it integrates better with test frameworks and extensions
-- it separates object construction from test preparation
+- It clearly communicates **test setup logic**
+- It works better with extensions and frameworks
+- It separates object construction from test preparation
 
 ---
 
 # Alternative Lifecycle Mode
 
-JUnit 5 provides another lifecycle mode:
+JUnit 5 also provides an alternative lifecycle mode:
 
 ```
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -254,20 +268,20 @@ class ExampleTest {
 In this mode:
 
 ```
-JUnit creates only one test instance for the entire class
+JUnit creates only one instance of the test class for all test methods
 ```
 
-Now `@BeforeAll` and `@AfterAll` **do not need to be static**.
+Because the instance already exists, `@BeforeAll` and `@AfterAll` **do not need to be static**.
 
-However, this mode allows tests to share state, which can cause tests to interfere with each other.
+However, this mode allows tests to share state, which can lead to unexpected interference between tests.
 
-For this reason, the default lifecycle (`PER_METHOD`) is generally safer.
+For this reason, the default lifecycle (`PER_METHOD`) is usually safer.
 
 ---
 
 # Execution Flow of Lifecycle Methods
 
-JUnit executes lifecycle methods in the following order:
+The typical execution order in JUnit is:
 
 ```
 @BeforeAll
@@ -287,17 +301,19 @@ JUnit executes lifecycle methods in the following order:
 @AfterAll
 ```
 
+This lifecycle ensures that each test runs in a **controlled and predictable environment**.
+
 ---
 
 # Summary
 
-Important concepts:
+Key concepts:
 
-- JUnit creates **a new test instance for each test method** by default.
-- This ensures **test isolation** and prevents tests from affecting each other.
-- `@BeforeAll` and `@AfterAll` run **outside test instance creation**, so they must be `static`.
-- `@BeforeEach` prepares a fresh environment for every test.
-- Expensive shared resources should be initialized in `@BeforeAll`.
-- JUnit also supports an alternative lifecycle using `@TestInstance(PER_CLASS)`.
+- JUnit creates **a new test instance for every test method by default**.
+- This ensures **test isolation** and prevents shared state between tests.
+- `@BeforeAll` and `@AfterAll` run outside instance creation, so they must be `static`.
+- `@BeforeEach` prepares a clean environment for each test.
+- Expensive resources should be initialized using `@BeforeAll`.
+- JUnit also supports `@TestInstance(PER_CLASS)` if a shared test instance is needed.
 
-JUnit’s lifecycle design ensures that tests remain **independent, repeatable, and reliable**.
+This lifecycle design helps make tests **independent, repeatable, and reliable**.
